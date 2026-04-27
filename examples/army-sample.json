@@ -1,0 +1,55 @@
+{
+  "schemaVersion": "1.0",
+  "id": "army-1714234567890",
+  "name": "Sample Army",
+  "createdAt": "2026-04-27T15:00:00.000Z",
+  "units": [
+    {
+      "id": "unit-001",
+      "name": "Intercessors",
+      "count": 6,
+      "points": 120,
+      "status": "active",
+      "scannedAt": null
+    },
+    {
+      "id": "unit-002",
+      "name": "Assault Intercessors",
+      "count": 5,
+      "points": 95,
+      "status": "active",
+      "scannedAt": null
+    },
+    {
+      "id": "unit-003",
+      "name": "Bladeguard Veteran",
+      "count": 3,
+      "points": 120,
+      "status": "active",
+      "scannedAt": null
+    },
+    {
+      "id": "unit-004",
+      "name": "Eradicators",
+      "count": 3,
+      "points": 0
+    },
+    {
+      "id": "unit-005",
+      "name": "Outriders",
+      "count": 0,
+      "points": 90
+    },
+    {
+      "id": "unit-006",
+      "name": "",
+      "count": 2,
+      "points": 50
+    },
+    {
+      "id": "unit-007",
+      "name": "Librarian",
+      "points": 85
+    }
+  ]
+}

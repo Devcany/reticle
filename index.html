@@ -11,15 +11,141 @@
   <title>Reticle</title>
 </head>
 <body>
-  <div id="app">
-    <header id="app-header">
-      <span id="app-title">Reticle</span>
-      <span id="status-dot"></span>
+<div id="app">
+
+  <!-- ===================== SCREEN: List Select ===================== -->
+  <div id="screen-list-select" class="screen">
+    <header class="s-header">
+      <span class="s-title">MEINE LISTEN</span>
+      <span class="s-dot"></span>
     </header>
-    <main id="app-main">
-      <!-- Paeckchen 1+ fuellt diesen Container -->
+    <main class="s-body">
+      <div id="list-select-armies" class="card-stack"></div>
+      <button id="list-select-new" class="btn btn--outline btn--block">+ NEUE LISTE</button>
     </main>
   </div>
-  <script src="app.js"></script>
+
+  <!-- ===================== SCREEN: Setup ===================== -->
+  <div id="screen-setup" class="screen">
+    <header class="s-header">
+      <button id="setup-back" class="s-back" aria-label="Zurueck">&#8592;</button>
+      <span class="s-title">SETUP</span>
+    </header>
+    <main class="s-body">
+      <div class="option-stack">
+        <button id="setup-opt-import" class="opt-card opt-card--accent">
+          <span class="opt-card-label">JSON importieren</span>
+          <span class="opt-card-arrow">&#8594;</span>
+        </button>
+        <button id="setup-opt-manual" class="opt-card">
+          <span class="opt-card-label">Manuell eingeben</span>
+          <span class="opt-card-arrow">&#8594;</span>
+        </button>
+        <button id="setup-opt-scan" class="opt-card opt-card--dashed">
+          <span class="opt-card-label">Ohne Liste scannen</span>
+          <span class="opt-card-arrow">&#8594;</span>
+        </button>
+      </div>
+      <p class="hint-text">Mit Liste: schnellere Erkennung, exakte Defaults.</p>
+    </main>
+  </div>
+
+  <!-- ===================== SCREEN: Import ===================== -->
+  <div id="screen-import" class="screen">
+    <header class="s-header">
+      <button id="import-back" class="s-back" aria-label="Zurueck">&#8592;</button>
+      <span class="s-title">IMPORT</span>
+    </header>
+    <main class="s-body">
+      <div id="import-dropzone" class="dropzone">
+        <input id="import-file-input" type="file" accept=".json" class="dropzone-input" />
+        <label for="import-file-input" class="dropzone-label">
+          <span class="dropzone-icon">&#8595;</span>
+          <span class="dropzone-text">Datei waehlen</span>
+          <span class="dropzone-hint">.json &middot; max 5 MB</span>
+        </label>
+      </div>
+
+      <div id="import-preview" hidden>
+        <!-- Preview card -->
+        <div id="import-preview-card" class="card" hidden>
+          <p id="import-preview-name" class="preview-name"></p>
+          <p id="import-preview-count" class="preview-count"></p>
+          <ul id="import-preview-units" class="preview-list"></ul>
+          <p id="import-preview-more" class="preview-more" hidden></p>
+        </div>
+        <!-- Warning -->
+        <div id="import-warn-card" class="alert alert--warn" hidden>
+          <span class="alert-icon">&#9888;</span>
+          <span id="import-warn-text" class="alert-text"></span>
+        </div>
+        <!-- Error -->
+        <div id="import-error-card" class="alert alert--error" hidden>
+          <span id="import-error-text" class="alert-text"></span>
+          <button id="import-error-retry" class="btn btn--ghost btn--sm">Andere Datei waehlen</button>
+        </div>
+        <!-- Confirm -->
+        <button id="import-confirm" class="btn btn--accent btn--block" hidden>LISTE UEBERNEHMEN</button>
+      </div>
+    </main>
+  </div>
+
+  <!-- ===================== SCREEN: Manual ===================== -->
+  <div id="screen-manual" class="screen">
+    <header class="s-header">
+      <button id="manual-back" class="s-back" aria-label="Zurueck">&#8592;</button>
+      <span id="manual-title" class="s-title">MANUELL &middot; 0</span>
+    </header>
+    <main class="s-body">
+      <div class="card form-card">
+        <!-- Name + autocomplete -->
+        <div id="manual-ac-wrap" class="ac-wrap">
+          <input id="manual-name" type="text" class="field" placeholder="Einheitenname"
+                 autocomplete="off" maxlength="100" />
+          <ul id="manual-autocomplete" class="ac-list" hidden></ul>
+        </div>
+        <!-- Count + points row -->
+        <div class="form-row">
+          <div class="counter">
+            <button id="manual-count-minus" class="counter-btn" aria-label="Weniger">&#8722;</button>
+            <input id="manual-count" type="number" class="counter-val" value="1" min="1" max="999" />
+            <button id="manual-count-plus" class="counter-btn" aria-label="Mehr">+</button>
+          </div>
+          <input id="manual-points" type="number" class="field field--pts"
+                 placeholder="Pkt." min="0" max="99999" />
+        </div>
+        <!-- Actions -->
+        <div class="form-actions">
+          <button id="manual-add"  class="btn btn--accent btn--add">+ HINZUFUEGEN</button>
+          <button id="manual-done" class="btn btn--muted btn--done">Fertig</button>
+        </div>
+      </div>
+
+      <!-- Live list -->
+      <ul id="manual-unit-list" class="mu-list"></ul>
+    </main>
+  </div>
+
+  <!-- ===================== SCREEN: Home ===================== -->
+  <div id="screen-home" class="screen">
+    <header class="s-header">
+      <button id="home-back" class="s-back" aria-label="Zurueck">&#8592;</button>
+      <span id="home-title" class="s-title">RETICLE</span>
+      <span class="s-dot"></span>
+    </header>
+    <main class="s-body">
+      <div id="home-army-card" class="card"></div>
+      <div class="next-hint">
+        <span class="next-hint-label">Paeckchen 2: Marker-Generierung</span>
+        <span class="next-hint-sub">Bald verfuegbar</span>
+      </div>
+    </main>
+  </div>
+
+  <!-- Toast -->
+  <div id="toast" class="toast" aria-live="polite" aria-atomic="true"></div>
+
+</div>
+<script type="module" src="app.js"></script>
 </body>
 </html>

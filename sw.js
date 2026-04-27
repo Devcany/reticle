@@ -1,15 +1,22 @@
 // Reticle — sw.js
-// Minimaler Cache-First Service Worker fuer App-Shell
+// Cache-First Service Worker fuer App-Shell.
+// Paeckchen 1: neue JS-Module in SHELL_FILES aufgenommen, Cache-Version bump.
 
-const CACHE_NAME = 'reticle-shell-v1';
+const CACHE_NAME = 'reticle-shell-v2';
 
 const SHELL_FILES = [
   './',
   './index.html',
+  './offline.html',
   './style.css',
   './app.js',
+  './storage.js',
+  './validator.js',
+  './ui.js',
+  './setup.js',
+  './import.js',
+  './manual.js',
   './manifest.json',
-  './offline.html',
   './icons/icon-192.png',
   './icons/icon-512.png',
 ];
@@ -39,13 +46,11 @@ self.addEventListener('activate', (event) => {
 });
 
 self.addEventListener('fetch', (event) => {
-  // Nur GET-Requests cachen
   if (event.request.method !== 'GET') return;
 
   event.respondWith(
     caches.match(event.request).then((cached) => {
       if (cached) return cached;
-
       return fetch(event.request).catch(() =>
         caches.match('./offline.html')
       );
