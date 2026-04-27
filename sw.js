@@ -2,12 +2,13 @@
 // Cache-First Service Worker fuer App-Shell.
 // Paeckchen 1: neue JS-Module in SHELL_FILES aufgenommen, Cache-Version bump.
 
-const CACHE_NAME = 'reticle-shell-v2';
+const CACHE_NAME = 'reticle-shell-v3';
 
 const SHELL_FILES = [
   './',
   './index.html',
   './offline.html',
+  './print.html',
   './style.css',
   './app.js',
   './storage.js',
@@ -16,6 +17,8 @@ const SHELL_FILES = [
   './setup.js',
   './import.js',
   './manual.js',
+  './marker.js',
+  './print.js',
   './manifest.json',
   './icons/icon-192.png',
   './icons/icon-512.png',

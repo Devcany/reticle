@@ -46,6 +46,9 @@ function renderHome(army) {
           </li>
         `).join('')}
       </ul>
+      <a href="print.html?armyId=${army.id}" class="btn btn--outline btn--block btn--print">
+        &#9634; Marker drucken
+      </a>
     `;
   }
 }

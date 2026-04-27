@@ -721,6 +721,12 @@ body {
   color: var(--text-muted);
 }
 
+/* Print button spacing */
+.btn--print {
+  margin-top: 1rem;
+  font-size: 0.75rem;
+}
+
 /* ===================== TOAST ===================== */
 .toast {
   position: fixed;

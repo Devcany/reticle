@@ -92,13 +92,27 @@ Reticle nutzt das Devcany-Designsystem: schwarz / Neongelb / Neon-Rot.
 
 ---
 
+## Marker drucken und kleben — Anleitung in 5 Schritten
+
+1. **Liste laden** — oeffne Reticle und lade deine Armeeliste.
+2. **"Marker drucken" tippen** — der Button erscheint auf dem Listen-Bildschirm.
+3. **Modus und Groesse waehlen** — "Pro Einheit" (ein Marker pro Einheit) oder "Pro Modell" (ein Marker pro Miniatur). Groesse: Small 6 mm / Medium 8 mm / Large 12 mm.
+4. **Drucken** — Browser-Druck-Dialog oeffnet sich (`Strg+P` / `Cmd+P`). Papier: A4, Rand 5 mm, Hintergrundgrafiken aktiviert.
+5. **Ausschneiden und kleben** — Marker an den Hilfslinien ausschneiden, unter die Base kleben (Klebesticker oder doppelseitiges Klebeband).
+
+**Marker-Format:** Original ArUco (js-aruco), 5x5 Datenbits, 7x7 Raster total. Kompatibel mit P3-Scan-Flow.
+
+**Mapping-Persistenz:** Einmal generierte Marker-IDs werden gespeichert und bleiben stabil — auch wenn du die Liste erweiterst. Neue Einheiten bekommen die naechste freie ID.
+
+---
+
 ## Paeckchen-Status
 
 | # | Titel | Status |
 |---|---|---|
 | **0** | Setup & Skelett | ✅ Done |
 | **1** | Listen-Datenmodell & Eingabe-Flow | ✅ Done |
-| 2 | Marker-Generierung (PDF-Druckbogen) | ⬜ Open |
+| **2** | Marker-Generierung (Druckbogen) | ✅ Done |
 | 3 | Scan-Flow (Kamera + Erkennung) | ⬜ Open |
 | 4 | Dashboard (KPIs, Live-Edit) | ⬜ Open |
 
