@@ -92,6 +92,40 @@ Reticle nutzt das Devcany-Designsystem: schwarz / Neongelb / Neon-Rot.
 
 ---
 
+## Scan benutzen
+
+### Voraussetzungen
+
+- HTTPS-Kontext (GitHub Pages erfullt das automatisch; lokal: `localhost` reicht auch)
+- Geraet mit Kamera (Android-Chrome oder iOS-Safari)
+- Armeeliste muss geladen sein (optional, aber empfohlen)
+
+### Ablauf
+
+1. **Liste laden** (Import oder manuell) und zum Dashboard navigieren.
+2. **"SCAN STARTEN"** tippen — der Browser fragt einmalig nach Kamera-Erlaubnis.
+3. **Permission erteilen** → Live-Kamera-Feed füllt den Bildschirm, Eckmarker leuchten auf.
+4. **Auslöser tippen** (runder Neongelb-Button unten mittig) → kurzer weißer Flash, Frame wird als Canvas gespeichert.
+   - Das Bild ist in der Browser-Konsole sichtbar: `[Reticle] Frame captured`.
+5. **Zurueck-Pfeil** (oben links) → Stream stoppt sofort (Akku-LED am Geraet erlischt), zurück zum Dashboard.
+
+### Permission verweigert
+
+Falls die Kamera-Erlaubnis abgelehnt wurde:
+
+1. Den Hinweis-Screen mit "Erneut versuchen" antippen — der Browser fragt erneut.
+2. Schlaegt das fehl: Kamera-Berechtigung in den Browser-Einstellungen manuell erteilen
+   (Android: Einstellungen → Apps → Chrome → Berechtigungen; iOS: Einstellungen → Safari → Kamera).
+
+### Hinweise fuer Entwickler
+
+- `scan.js` exportiert `initScanScreen({ onCapture, onBack })` und `stopCamera()`.
+- `onCapture(imageData, canvas)` liefert ein `ImageData`-Objekt der vollen Sensor-Aufloesung.
+- P3b haengt die ArUco-Erkennung direkt in den `onCapture`-Callback.
+- iOS-Safari benoetigt `playsinline` auf dem `<video>`-Element (bereits gesetzt).
+
+---
+
 ## Marker drucken und kleben — Anleitung in 5 Schritten
 
 1. **Liste laden** — oeffne Reticle und lade deine Armeeliste.
@@ -113,7 +147,9 @@ Reticle nutzt das Devcany-Designsystem: schwarz / Neongelb / Neon-Rot.
 | **0** | Setup & Skelett | ✅ Done |
 | **1** | Listen-Datenmodell & Eingabe-Flow | ✅ Done |
 | **2** | Marker-Generierung (Druckbogen) | ✅ Done |
-| 3 | Scan-Flow (Kamera + Erkennung) | ⬜ Open |
+| **3a** | Kamera & Live-Preview | ✅ Done |
+| 3b | ArUco-Erkennung | ⬜ Open |
+| 3c | Vorschlag-Karte & Fallback-UX | ⬜ Open |
 | 4 | Dashboard (KPIs, Live-Edit) | ⬜ Open |
 
 ---

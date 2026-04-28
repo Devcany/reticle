@@ -1,8 +1,8 @@
 // Reticle — sw.js
 // Cache-First Service Worker fuer App-Shell.
-// Paeckchen 1: neue JS-Module in SHELL_FILES aufgenommen, Cache-Version bump.
+// P3a: scan.js aufgenommen, Cache-Version bump.
 
-const CACHE_NAME = 'reticle-shell-v3';
+const CACHE_NAME = 'reticle-shell-v4';
 
 const SHELL_FILES = [
   './',
@@ -19,6 +19,7 @@ const SHELL_FILES = [
   './manual.js',
   './marker.js',
   './print.js',
+  './scan.js',
   './manifest.json',
   './icons/icon-192.png',
   './icons/icon-512.png',

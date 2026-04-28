@@ -135,11 +135,49 @@
     </header>
     <main class="s-body">
       <div id="home-army-card" class="card"></div>
-      <div class="next-hint">
-        <span class="next-hint-label">Paeckchen 2: Marker-Generierung</span>
-        <span class="next-hint-sub">Bald verfuegbar</span>
-      </div>
+      <button id="home-scan-btn" class="btn btn--accent btn--block btn--scan-start">
+        &#9711;&nbsp; SCAN STARTEN
+      </button>
     </main>
+  </div>
+
+  <!-- ===================== SCREEN: Scan ===================== -->
+  <div id="screen-scan" class="screen screen--scan">
+
+    <!-- Live-Kamera-Feed -->
+    <video id="scan-video" class="scan-video" autoplay muted playsinline></video>
+
+    <!-- Verstecktes Canvas fuer Capture -->
+    <canvas id="scan-canvas" hidden></canvas>
+
+    <!-- Weisser Flash beim Auslösen -->
+    <div id="scan-flash" class="scan-flash"></div>
+
+    <!-- Eck-Marker (Reticle) -->
+    <div class="scan-corner scan-corner--tl" aria-hidden="true"></div>
+    <div class="scan-corner scan-corner--tr" aria-hidden="true"></div>
+    <div class="scan-corner scan-corner--bl" aria-hidden="true"></div>
+    <div class="scan-corner scan-corner--br" aria-hidden="true"></div>
+
+    <!-- Top-Overlay: Zurueck | Unit-Label | Status-Dot -->
+    <div class="scan-top">
+      <button id="scan-back" class="scan-back" aria-label="Zurueck">&#8592;</button>
+      <span id="scan-unit-label" class="scan-unit-label">&#8212; / &#8212;</span>
+      <div id="scan-status-dot" class="scan-status scan-status--idle" title="Idle"></div>
+    </div>
+
+    <!-- Permission-Fehler-Overlay -->
+    <div id="scan-permission-error" class="scan-error" hidden>
+      <span class="scan-error-icon">&#128247;</span>
+      <p id="scan-error-msg" class="scan-error-msg">Kamera-Zugriff verweigert.</p>
+      <button id="scan-retry" class="btn btn--accent">Erneut versuchen</button>
+    </div>
+
+    <!-- Auslöse-Button -->
+    <div class="scan-bottom">
+      <button id="scan-shutter" class="scan-shutter" aria-label="Foto aufnehmen"></button>
+    </div>
+
   </div>
 
   <!-- Toast -->

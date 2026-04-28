@@ -2,10 +2,11 @@
 // Entry point. SW registration + app init + screen routing.
 
 import { getAllArmies, getActiveArmyId, setActiveArmyId } from './storage.js';
-import { showScreen, navigate } from './ui.js';
+import { showScreen, navigate, goBack } from './ui.js';
 import { initSetupScreen } from './setup.js';
 import { initImportScreen } from './import.js';
 import { initManualScreen } from './manual.js';
+import { initScanScreen, startScan, stopCamera } from './scan.js';
 
 // --- Service Worker ---
 if ('serviceWorker' in navigator) {
@@ -75,7 +76,7 @@ function renderListSelect(armies) {
 }
 
 // --- Static listeners (wired once) ---
-function wireStaticListeners(manualCtrl) {
+function wireStaticListeners(manualCtrl, scanCtrl) {
   const listSelectNew = document.getElementById('list-select-new');
   if (listSelectNew) {
     listSelectNew.addEventListener('click', () => {
@@ -96,6 +97,18 @@ function wireStaticListeners(manualCtrl) {
       }
     });
   }
+
+  // "Scan starten" Button auf dem Home-Screen
+  const homeScanBtn = document.getElementById('home-scan-btn');
+  if (homeScanBtn) {
+    homeScanBtn.addEventListener('click', async () => {
+      const activeId  = await getActiveArmyId();
+      const armies    = await getAllArmies();
+      const activeArmy = activeId ? armies.find((a) => a.id === activeId) : null;
+      navigate('screen-scan');
+      scanCtrl.start(activeArmy || null);
+    });
+  }
 }
 
 // --- Init ---
@@ -113,10 +126,30 @@ async function initApp() {
     navigate('screen-home');
   }
 
+  // Scan-Screen: Capture-Callback (Vorbereitung P3b) + Zurück-Navigation
+  const scanCtrl = initScanScreen({
+    onCapture: (imageData, canvas) => {
+      // P3b: ArUco-Erkennung hier einhängen
+      console.log('[Reticle] Frame captured — bereit fuer P3b:', imageData.width, 'x', imageData.height);
+    },
+    onBack: async () => {
+      // Stream ist bereits gestoppt (scan.js ruft stopCamera vor onBack)
+      const armies     = await getAllArmies();
+      const activeId   = await getActiveArmyId();
+      const activeArmy = activeId ? armies.find((a) => a.id === activeId) : null;
+      if (activeArmy) {
+        renderHome(activeArmy);
+        showScreen('screen-home');
+      } else {
+        goBack('screen-home');
+      }
+    },
+  });
+
   const manualCtrl = initManualScreen(onManualDone);
   initSetupScreen(hasArmies, () => manualCtrl.reset());
   initImportScreen(onImportDone);
-  wireStaticListeners(manualCtrl);
+  wireStaticListeners(manualCtrl, scanCtrl);
 
   // Determine start screen
   const activeId    = await getActiveArmyId();
