@@ -2,7 +2,7 @@
 // Cache-First Service Worker fuer App-Shell.
 // P3a: scan.js aufgenommen, Cache-Version bump.
 
-const CACHE_NAME = 'reticle-shell-v5';
+const CACHE_NAME = 'reticle-shell-v6';
 
 const SHELL_FILES = [
   './',

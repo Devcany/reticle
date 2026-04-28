@@ -1,5 +1,6 @@
 // Reticle — manual.js
 // Manual unit entry screen: form + autocomplete + live list.
+// P3c: renderOpenUnitsList — Manuell-Hebel im Scan-Screen.
 
 import { goBack, showToast } from './ui.js';
 import { saveArmy, setActiveArmyId, getAllUnitNames } from './storage.js';
@@ -171,4 +172,36 @@ export function initManualScreen(onDone) {
   }
 
   return { reset: resetState };
+}
+
+/**
+ * Rendert eine Liste offener (noch nicht gescannter) Einheiten in einen Container.
+ * Wird vom Scan-Screen "Manuell"-Picker aufgerufen.
+ *
+ * @param {HTMLElement} containerEl  - Ziel-Element (wird geleert und befüllt)
+ * @param {object[]}    openUnits    - Einheiten mit scannedAt === null
+ * @param {function}    onPick       - (unit) => void  — aufgerufen bei Auswahl
+ */
+export function renderOpenUnitsList(containerEl, openUnits, onPick) {
+  if (!containerEl) return;
+  containerEl.innerHTML = '';
+
+  if (!openUnits?.length) {
+    const msg = document.createElement('p');
+    msg.className = 'scan-picker-empty';
+    msg.textContent = 'Alle Einheiten bereits erkannt. \u2713';
+    containerEl.appendChild(msg);
+    return;
+  }
+
+  openUnits.forEach((unit) => {
+    const btn = document.createElement('button');
+    btn.className = 'scan-picker-item';
+    btn.innerHTML = `
+      <span class="scan-picker-item-name">${unit.name}</span>
+      <span class="scan-picker-item-meta">\u00d7${unit.count}\u00a0\u00b7\u00a0${unit.points}\u00a0Pkt.</span>
+    `;
+    btn.addEventListener('click', () => onPick(unit));
+    containerEl.appendChild(btn);
+  });
 }

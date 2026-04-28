@@ -178,6 +178,80 @@
       <button id="scan-shutter" class="scan-shutter" aria-label="Foto aufnehmen"></button>
     </div>
 
+    <!-- ── Vorschlag-Karte (erscheint nach Capture, State-gesteuert) ── -->
+    <div id="scan-proposal" class="scan-proposal" hidden>
+
+      <!-- State: proposing — einzelner klarer Treffer -->
+      <div id="sp-found" class="sp-block" hidden>
+        <div class="sp-found-top">
+          <div class="sp-found-info">
+            <div id="sp-name" class="sp-name"></div>
+            <div id="sp-sub"  class="sp-sub"></div>
+          </div>
+          <span class="sp-tag sp-tag--found">ERKANNT</span>
+        </div>
+        <div class="sp-count-row">
+          <span class="sp-count-label">Modelle</span>
+          <div class="counter">
+            <button id="sp-minus" class="counter-btn" aria-label="Weniger">&#8722;</button>
+            <input  id="sp-count" type="number" class="counter-val" min="1" max="999" />
+            <button id="sp-plus"  class="counter-btn" aria-label="Mehr">+</button>
+          </div>
+        </div>
+        <div class="sp-actions">
+          <button class="btn btn--ghost sp-dismiss sp-btn-secondary">Verwerfen</button>
+          <button id="sp-confirm" class="btn btn--accent sp-btn-primary">BEST&#196;TIGEN</button>
+        </div>
+      </div>
+
+      <!-- State: ambiguous — mehrere Treffer (orange Ecken) -->
+      <div id="sp-ambiguous" class="sp-block" hidden>
+        <div class="sp-ambig-top">
+          <span class="sp-ambig-label">Mehrere Treffer</span>
+          <span id="sp-ambig-count" class="sp-ambig-count"></span>
+        </div>
+        <div id="sp-ambig-list" class="sp-ambig-list"></div>
+        <div class="sp-actions">
+          <button class="btn btn--ghost sp-dismiss sp-btn-secondary">N&#228;her ran</button>
+          <button class="btn btn--muted  sp-open-manual sp-btn-secondary">Manuell</button>
+        </div>
+      </div>
+
+      <!-- State: none — kein Marker erkannt -->
+      <div id="sp-none" class="sp-block" hidden>
+        <div class="sp-none-body">
+          <span class="sp-none-icon">&#9678;</span>
+          <span class="sp-none-text">Kein Marker erkannt</span>
+        </div>
+        <div class="sp-actions">
+          <button class="btn btn--ghost sp-dismiss sp-btn-secondary">N&#228;her ran</button>
+          <button class="btn btn--muted  sp-open-manual sp-btn-secondary">Manuell</button>
+        </div>
+      </div>
+
+      <!-- State: duplicate — Einheit bereits erkannt -->
+      <div id="sp-duplicate" class="sp-block" hidden>
+        <div class="sp-dup-body">
+          <span class="sp-dup-icon">&#10003;</span>
+          <p id="sp-dup-text" class="sp-dup-text"></p>
+        </div>
+        <div class="sp-actions">
+          <button id="sp-dup-override" class="btn btn--ghost sp-btn-wide">Trotzdem &#252;berschreiben</button>
+          <button class="btn btn--accent sp-dismiss sp-btn-primary">OK</button>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- ── Manual Picker Overlay (offene Einheiten) ── -->
+    <div id="scan-picker" class="scan-picker" hidden>
+      <div class="scan-picker-header">
+        <span class="scan-picker-title">EINHEIT W&#196;HLEN</span>
+        <button id="scan-picker-close" class="scan-back" aria-label="Schlie&#223;en">&#10005;</button>
+      </div>
+      <div id="scan-picker-list" class="scan-picker-list"></div>
+    </div>
+
   </div>
 
   <!-- Toast -->

@@ -1,83 +1,85 @@
 // Reticle — scan.js
 // P3a: Kamera-Zugriff, Live-Preview, Foto-Capture.
-// Kein ArUco, keine Logik — nur Bild rein, Bild raus.
+// P3c: Scan-UX State Machine, Vorschlag-Karte, Bestätigen-Aktion.
+//
+// State Machine:
+//   idle       — Kamera läuft, keine Karte sichtbar
+//   proposing  — Einzelner klarer Treffer, Vorschlag-Karte
+//   ambiguous  — Mehrere Treffer, Top-3-Auswahl-Karte (orange Ecken)
+//   none       — Kein Marker erkannt
+//   duplicate  — Marker schon erkannt, Hinweis-Karte
+//   manual     — Manueller Picker (Liste offener Einheiten)
 
+// ─── Kamera-State ──────────────────────────────────────────────────────────
 let _stream     = null;
 let _videoEl    = null;
 let _canvasEl   = null;
-let _onCapture  = null;
-let _onBack     = null;
+
+// ─── Callbacks ─────────────────────────────────────────────────────────────
+let _onCapture  = null;   // (imageData) → void  [app.js runs detection]
+let _onBack     = null;   // () → void
+let _onConfirm  = null;   // async ({ unitId, modelIndex, markerId, newCount }) → void
+
+// ─── UX State ──────────────────────────────────────────────────────────────
+let _state        = 'idle';
+let _currentArmy  = null;   // aktive Armee (Referenz, wird von app.js mutiert)
+let _pendingMatch = null;   // Match-Objekt das gerade bearbeitet wird
+let _pendingUnit  = null;   // Unit-Objekt dazu
 
 // ─── Public API ────────────────────────────────────────────────────────────
 
-/**
- * Muss einmalig aufgerufen werden (nach DOM-Ready).
- * @param {object} opts
- * @param {function} opts.onCapture  - Callback(imageData, canvas) bei Auslöser-Tap
- * @param {function} opts.onBack     - Callback wenn Zurück gedrückt wird
- */
-export function initScanScreen({ onCapture, onBack } = {}) {
+export function initScanScreen({ onCapture, onBack, onConfirm } = {}) {
   _onCapture = onCapture || null;
   _onBack    = onBack    || null;
+  _onConfirm = onConfirm || null;
 
   _videoEl  = document.getElementById('scan-video');
   _canvasEl = document.getElementById('scan-canvas');
 
-  const shutterBtn = document.getElementById('scan-shutter');
-  const backBtn    = document.getElementById('scan-back');
-  const retryBtn   = document.getElementById('scan-retry');
-
-  shutterBtn?.addEventListener('click', handleCapture);
-  backBtn?.addEventListener('click', handleBack);
-  retryBtn?.addEventListener('click', () => {
-    _setPermissionError(false);
-    _startCamera();
-  });
+  _wireStaticListeners();
 
   return {
-    /**
-     * Vollständiger Start (army bereits vorhanden): Label + Kamera.
-     * Nur nutzen wenn army synchron verfügbar ist — kein await davor!
-     */
+    /** Vollständiger Start (army bereits synchron verfügbar) */
     start: startScan,
 
     /**
-     * iOS-sicherer Start: Kamera sofort starten (kein await davor),
-     * Army-Label erst danach per setArmy() setzen.
-     * Pflicht auf iOS Safari: getUserMedia muss im User-Gesture-Stack bleiben.
+     * iOS-sicherer Start: getUserMedia sofort, kein await davor.
+     * Army-Label danach per setArmy() setzen.
      */
     startCamera: startCameraOnly,
 
-    /** Army-Label nachträglich setzen, nachdem async-Daten geladen wurden. */
-    setArmy: (army) => _setUnitLabel(army, 0),
+    /** Army-Label und internen Kontext setzen (nach async-Load). */
+    setArmy: (army) => {
+      _currentArmy = army;
+      _setUnitLabel(army, _countScanned(army));
+    },
+
+    /**
+     * Detektor-Ergebnis entgegennehmen und passende Karte anzeigen.
+     * Wird vom onCapture-Handler in app.js aufgerufen.
+     * @param {{ status: 'found'|'none', matches: object[] }} result
+     */
+    showResult,
 
     stop: stopCamera,
   };
 }
 
-/**
- * Vollständiger Start: Label setzen + Kamera.
- * @param {object|null} army
- */
 export function startScan(army) {
-  _setUnitLabel(army, 0);
+  _currentArmy = army;
+  _setUnitLabel(army, _countScanned(army));
   _setPermissionError(false);
+  _enterState('idle');
   _startCamera();
 }
 
-/**
- * iOS-sicherer Kamerastart: getUserMedia sofort, kein await davor.
- * Army-Label separat per setArmy() nachziehen.
- */
 export function startCameraOnly() {
-  _setUnitLabel(null, 0);   // Reset Label auf — / —
+  _setUnitLabel(_currentArmy, _countScanned(_currentArmy));
   _setPermissionError(false);
-  _startCamera();            // getUserMedia wird hier initiiert — noch im Gesture-Context
+  _enterState('idle');
+  _startCamera();
 }
 
-/**
- * Stream stoppen (immer beim Verlassen des Screens aufrufen).
- */
 export function stopCamera() {
   if (_stream) {
     _stream.getTracks().forEach((t) => t.stop());
@@ -87,45 +89,329 @@ export function stopCamera() {
   _setStatusLive(false);
 }
 
-// ─── Internal ──────────────────────────────────────────────────────────────
+export function showResult(result) {
+  const army = _currentArmy;
 
-async function _startCamera() {
-  try {
-    const constraints = {
-      video: {
-        facingMode: { ideal: 'environment' },   // Rückkamera Pflicht, Front als Fallback
-        width:  { ideal: 1920 },
-        height: { ideal: 1080 },
-      },
-      audio: false,
-    };
+  // Kein Treffer oder kein Marker
+  if (!result || result.status === 'none' || !result.matches?.length) {
+    _enterState('none');
+    return;
+  }
 
-    _stream = await navigator.mediaDevices.getUserMedia(constraints);
+  if (result.matches.length === 1) {
+    const match = result.matches[0];
+    const unit  = army?.units?.find((u) => u.id === match.unitId);
+    if (!unit) { _enterState('none'); return; }
 
-    if (_videoEl) {
-      _videoEl.srcObject = _stream;
-      // play() kann auf iOS rejected werden wenn nicht muted + playsinline
-      await _videoEl.play().catch(() => {});
+    _pendingMatch = match;
+    _pendingUnit  = unit;
+
+    if (unit.scannedAt) {
+      _populateDuplicate(unit);
+      _enterState('duplicate');
+    } else {
+      _populateFound(unit);
+      _enterState('proposing');
     }
+    return;
+  }
 
-    _setStatusLive(true);
-    _setPermissionError(false);
+  // Mehrere Treffer — frische (nicht-gescannte) filtern
+  const freshMatches = result.matches.filter((m) => {
+    const u = army?.units?.find((u2) => u2.id === m.unitId);
+    return !u?.scannedAt;
+  });
 
-  } catch (err) {
-    console.warn('[Scan] Camera error:', err.name, err.message);
-    _setStatusLive(false);
+  if (!freshMatches.length) {
+    // Alle schon gescannt → Duplicate des größten
+    const match = result.matches[0];
+    const unit  = army?.units?.find((u) => u.id === match.unitId);
+    _pendingMatch = match;
+    _pendingUnit  = unit;
+    _populateDuplicate(unit);
+    _enterState('duplicate');
+    return;
+  }
 
-    const msgs = {
-      NotAllowedError:       'Kamera-Zugriff verweigert. Bitte erlaube den Zugriff in den Browser-Einstellungen.',
-      PermissionDeniedError: 'Kamera-Zugriff verweigert. Bitte erlaube den Zugriff in den Browser-Einstellungen.',
-      NotFoundError:         'Keine Kamera gefunden. Geraet unterstuetzt moeglicherweis keine Kamera.',
-      NotReadableError:      'Kamera wird gerade von einer anderen App verwendet.',
-      OverconstrainedError:  'Kamera-Parameter nicht unterstuetzt. Versuche es erneut.',
-    };
-    const msg = msgs[err.name] || `Kamera nicht verfuegbar (${err.name}).`;
-    _setPermissionError(true, msg);
+  _populateAmbiguous(freshMatches.slice(0, 3));
+  _enterState('ambiguous');
+}
+
+// ─── State Machine ─────────────────────────────────────────────────────────
+
+function _enterState(state) {
+  _state = state;
+
+  const proposal = document.getElementById('scan-proposal');
+  const shutter  = document.getElementById('scan-shutter');
+  const picker   = document.getElementById('scan-picker');
+
+  // Reset alles
+  _hideAllBlocks();
+  if (proposal) proposal.hidden = true;
+  if (picker)   picker.hidden   = true;
+  if (shutter)  shutter.hidden  = false;
+  _setCorners('normal');
+  _clearProposalMod();
+
+  switch (state) {
+    case 'idle':
+      break;
+
+    case 'proposing':
+      if (proposal) proposal.hidden = false;
+      if (shutter)  shutter.hidden  = true;
+      _showBlock('sp-found');
+      _setProposalMod('found');
+      break;
+
+    case 'ambiguous':
+      if (proposal) proposal.hidden = false;
+      if (shutter)  shutter.hidden  = true;
+      _showBlock('sp-ambiguous');
+      _setProposalMod('ambiguous');
+      _setCorners('ambiguous');
+      break;
+
+    case 'none':
+      if (proposal) proposal.hidden = false;
+      if (shutter)  shutter.hidden  = true;
+      _showBlock('sp-none');
+      break;
+
+    case 'duplicate':
+      if (proposal) proposal.hidden = false;
+      if (shutter)  shutter.hidden  = true;
+      _showBlock('sp-duplicate');
+      _setProposalMod('found');  // gleicher Border-Ton
+      break;
+
+    case 'manual':
+      if (picker)  picker.hidden  = true;   // Hide first to reset
+      _renderPicker();
+      if (picker)  picker.hidden  = false;
+      if (shutter) shutter.hidden = true;
+      break;
   }
 }
+
+function _hideAllBlocks() {
+  ['sp-found', 'sp-ambiguous', 'sp-none', 'sp-duplicate'].forEach((id) => {
+    const el = document.getElementById(id);
+    if (el) el.hidden = true;
+  });
+}
+
+function _showBlock(id) {
+  const el = document.getElementById(id);
+  if (el) el.hidden = false;
+}
+
+function _setProposalMod(mod) {
+  const el = document.getElementById('scan-proposal');
+  if (!el) return;
+  el.dataset.mod = mod;
+}
+
+function _clearProposalMod() {
+  const el = document.getElementById('scan-proposal');
+  if (!el) return;
+  delete el.dataset.mod;
+}
+
+// ─── Corner Colors ─────────────────────────────────────────────────────────
+
+function _setCorners(style) {
+  const screen = document.getElementById('screen-scan');
+  if (!screen) return;
+  screen.classList.remove('scan-corners--ambiguous', 'scan-corners--confirmed');
+  if (style === 'ambiguous') screen.classList.add('scan-corners--ambiguous');
+  if (style === 'confirmed') screen.classList.add('scan-corners--confirmed');
+}
+
+function _pulseConfirmed() {
+  _setCorners('confirmed');
+  setTimeout(() => _setCorners('normal'), 700);
+}
+
+// ─── Card Content ──────────────────────────────────────────────────────────
+
+function _populateFound(unit) {
+  const nameEl  = document.getElementById('sp-name');
+  const subEl   = document.getElementById('sp-sub');
+  const countEl = document.getElementById('sp-count');
+
+  if (nameEl)  nameEl.textContent  = unit.name;
+  if (subEl)   subEl.textContent   = `${unit.count} Modelle · ${unit.points} Pkt.`;
+  if (countEl) { countEl.value = unit.count; countEl.min = 1; countEl.max = 999; }
+}
+
+function _populateAmbiguous(matches) {
+  const list     = document.getElementById('sp-ambig-list');
+  const countEl  = document.getElementById('sp-ambig-count');
+  const army     = _currentArmy;
+
+  if (countEl) countEl.textContent = `${matches.length} Treffer`;
+  if (!list)   return;
+
+  list.innerHTML = '';
+  matches.forEach((match) => {
+    const unit = army?.units?.find((u) => u.id === match.unitId);
+    if (!unit) return;
+
+    const btn = document.createElement('button');
+    btn.className = 'sp-ambig-item';
+    btn.innerHTML = `
+      <span class="sp-ambig-name">${unit.name}</span>
+      <span class="sp-ambig-meta">\u00d7${unit.count}&nbsp;&middot;&nbsp;${unit.points}&nbsp;Pkt.</span>
+    `;
+    btn.addEventListener('click', () => {
+      _pendingMatch = match;
+      _pendingUnit  = unit;
+      _populateFound(unit);
+      _enterState('proposing');
+    });
+    list.appendChild(btn);
+  });
+}
+
+function _populateDuplicate(unit) {
+  const textEl = document.getElementById('sp-dup-text');
+  if (!textEl) return;
+  const ts = unit?.scannedAt
+    ? new Date(unit.scannedAt).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })
+    : null;
+  textEl.textContent = ts
+    ? `Bereits erkannt: ${unit.name} (${ts})`
+    : `Bereits erkannt: ${unit.name}`;
+}
+
+// ─── Manual Picker ─────────────────────────────────────────────────────────
+
+function _renderPicker() {
+  const list = document.getElementById('scan-picker-list');
+  if (!list) return;
+  list.innerHTML = '';
+
+  const army = _currentArmy;
+  if (!army?.units?.length) {
+    list.innerHTML = '<p class="scan-picker-empty">Keine Einheiten in der Liste.</p>';
+    return;
+  }
+
+  const openUnits = army.units.filter((u) => !u.scannedAt);
+  if (!openUnits.length) {
+    list.innerHTML = '<p class="scan-picker-empty">Alle Einheiten bereits erkannt. &#10003;</p>';
+    return;
+  }
+
+  openUnits.forEach((unit) => {
+    const btn = document.createElement('button');
+    btn.className = 'scan-picker-item';
+    btn.innerHTML = `
+      <span class="scan-picker-item-name">${unit.name}</span>
+      <span class="scan-picker-item-meta">\u00d7${unit.count}&nbsp;&middot;&nbsp;${unit.points}&nbsp;Pkt.</span>
+    `;
+    btn.addEventListener('click', () => {
+      _pendingMatch = { unitId: unit.id, modelIndex: null, markerId: null, diagonal: 0 };
+      _pendingUnit  = unit;
+      _populateFound(unit);
+      _enterState('proposing');
+    });
+    list.appendChild(btn);
+  });
+}
+
+// ─── Confirm Action ────────────────────────────────────────────────────────
+
+async function _handleConfirm() {
+  const match = _pendingMatch;
+  const unit  = _pendingUnit;
+  if (!match || !unit) return;
+
+  const countEl  = document.getElementById('sp-count');
+  const newCount = Math.max(1, parseInt(countEl?.value, 10) || 1);
+
+  // UI sofort schließen
+  _pendingMatch = null;
+  _pendingUnit  = null;
+  _enterState('idle');
+
+  // Persistenz in app.js
+  if (_onConfirm) {
+    await _onConfirm({
+      unitId:     unit.id,
+      modelIndex: match.modelIndex ?? null,
+      markerId:   match.markerId   ?? null,
+      newCount,
+    });
+  }
+
+  // Visuelles Feedback + Counter — _currentArmy wurde von app.js mutiert
+  _pulseConfirmed();
+  _setUnitLabel(_currentArmy, _countScanned(_currentArmy));
+}
+
+// ─── Static Event Listeners (einmalig verdrahtet) ──────────────────────────
+
+function _wireStaticListeners() {
+  // Kamera-Auslöser
+  document.getElementById('scan-shutter')?.addEventListener('click', handleCapture);
+
+  // Zurück-Pfeil
+  document.getElementById('scan-back')?.addEventListener('click', handleBack);
+
+  // Permission-Retry
+  document.getElementById('scan-retry')?.addEventListener('click', () => {
+    _setPermissionError(false);
+    _startCamera();
+  });
+
+  // ── Proposal: Counter ──
+  document.getElementById('sp-minus')?.addEventListener('click', () => {
+    const el = document.getElementById('sp-count');
+    if (el) el.value = Math.max(1, (parseInt(el.value, 10) || 1) - 1);
+  });
+  document.getElementById('sp-plus')?.addEventListener('click', () => {
+    const el = document.getElementById('sp-count');
+    if (el) el.value = Math.min(999, (parseInt(el.value, 10) || 1) + 1);
+  });
+
+  // ── Proposal: Bestätigen ──
+  document.getElementById('sp-confirm')?.addEventListener('click', _handleConfirm);
+
+  // ── Proposal: Verwerfen / Näher ran / OK ──
+  // Alle Buttons mit Klasse sp-dismiss gehen zurück zu idle
+  document.getElementById('scan-proposal')?.addEventListener('click', (e) => {
+    if (e.target.classList.contains('sp-dismiss')) {
+      _pendingMatch = null;
+      _pendingUnit  = null;
+      _enterState('idle');
+    }
+  });
+
+  // ── Proposal: Manuell ──
+  document.getElementById('scan-proposal')?.addEventListener('click', (e) => {
+    if (e.target.classList.contains('sp-open-manual')) {
+      _enterState('manual');
+    }
+  });
+
+  // ── Duplicate: Trotzdem überschreiben ──
+  document.getElementById('sp-dup-override')?.addEventListener('click', () => {
+    if (_pendingUnit) {
+      _populateFound(_pendingUnit);
+      _enterState('proposing');
+    }
+  });
+
+  // ── Manual Picker: Schließen ──
+  document.getElementById('scan-picker-close')?.addEventListener('click', () => {
+    _enterState('idle');
+  });
+}
+
+// ─── Capture ───────────────────────────────────────────────────────────────
 
 function handleCapture() {
   if (!_stream || !_videoEl || !_canvasEl) return;
@@ -139,25 +425,58 @@ function handleCapture() {
 
   const ctx = _canvasEl.getContext('2d');
   ctx.drawImage(_videoEl, 0, 0, vw, vh);
-
   const imageData = ctx.getImageData(0, 0, vw, vh);
 
-  // Visuelles Feedback
   _triggerFlash();
   _triggerShutterPulse();
 
-  // Debug-Log (Vorbereitung P3b)
-  console.log('[Reticle P3a] Captured ImageData:', imageData);
+  console.log('[Reticle P3a] Captured ImageData:', imageData.width, '\u00d7', imageData.height);
 
   if (_onCapture) _onCapture(imageData, _canvasEl);
 }
 
 function handleBack() {
   stopCamera();
+  _enterState('idle');
   if (_onBack) _onBack();
 }
 
-// ─── UI helpers ────────────────────────────────────────────────────────────
+// ─── Camera ────────────────────────────────────────────────────────────────
+
+async function _startCamera() {
+  try {
+    _stream = await navigator.mediaDevices.getUserMedia({
+      video: {
+        facingMode: { ideal: 'environment' },
+        width:  { ideal: 1920 },
+        height: { ideal: 1080 },
+      },
+      audio: false,
+    });
+
+    if (_videoEl) {
+      _videoEl.srcObject = _stream;
+      await _videoEl.play().catch(() => {});
+    }
+
+    _setStatusLive(true);
+    _setPermissionError(false);
+
+  } catch (err) {
+    console.warn('[Scan] Camera error:', err.name, err.message);
+    _setStatusLive(false);
+    const msgs = {
+      NotAllowedError:       'Kamera-Zugriff verweigert. Bitte erlaube den Zugriff in den Browser-Einstellungen.',
+      PermissionDeniedError: 'Kamera-Zugriff verweigert. Bitte erlaube den Zugriff in den Browser-Einstellungen.',
+      NotFoundError:         'Keine Kamera gefunden.',
+      NotReadableError:      'Kamera wird gerade von einer anderen App verwendet.',
+      OverconstrainedError:  'Kamera-Parameter nicht unterstuetzt. Versuche es erneut.',
+    };
+    _setPermissionError(true, msgs[err.name] || `Kamera nicht verfuegbar (${err.name}).`);
+  }
+}
+
+// ─── UI Helpers ────────────────────────────────────────────────────────────
 
 function _setStatusLive(live) {
   const dot = document.getElementById('scan-status-dot');
@@ -172,22 +491,21 @@ function _setPermissionError(show, message) {
   const shutterEl = document.getElementById('scan-shutter');
   const msgEl     = document.getElementById('scan-error-msg');
 
-  if (errEl)     errEl.hidden          = !show;
-  if (shutterEl) shutterEl.hidden      = show;
+  if (errEl)     errEl.hidden     = !show;
+  if (shutterEl && !show) shutterEl.hidden = false;  // nur freigeben, nicht forcieren
   if (msgEl && message) msgEl.textContent = message;
-
-  // Video ausblenden damit kein schwarzes Rechteck bleibt
   if (_videoEl) _videoEl.style.visibility = show ? 'hidden' : 'visible';
 }
 
 function _setUnitLabel(army, scannedCount) {
   const label = document.getElementById('scan-unit-label');
   if (!label) return;
-  if (!army || !army.units || army.units.length === 0) {
-    label.textContent = '\u2014 / \u2014';   // — / —
-    return;
-  }
+  if (!army?.units?.length) { label.textContent = '\u2014 / \u2014'; return; }
   label.textContent = `${scannedCount} / ${army.units.length}`;
+}
+
+function _countScanned(army) {
+  return army?.units?.filter((u) => u.scannedAt)?.length ?? 0;
 }
 
 function _triggerFlash() {

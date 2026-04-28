@@ -1,12 +1,12 @@
 // Reticle — app.js
 // Entry point. SW registration + app init + screen routing.
 
-import { getAllArmies, getActiveArmyId, setActiveArmyId } from './storage.js';
+import { getAllArmies, getActiveArmyId, setActiveArmyId, getArmy, saveArmy } from './storage.js';
 import { showScreen, navigate, goBack } from './ui.js';
 import { initSetupScreen } from './setup.js';
 import { initImportScreen } from './import.js';
 import { initManualScreen } from './manual.js';
-import { initScanScreen, startScan, stopCamera } from './scan.js';
+import { initScanScreen } from './scan.js';
 import { detectMarkers, markersToUnits } from './detector.js';
 
 // --- Service Worker ---
@@ -138,14 +138,33 @@ async function initApp() {
     navigate('screen-home');
   }
 
-  // Scan-Screen: ArUco-Erkennung + Mapping in onCapture
+  // Scan-Screen: Erkennung + Mapping + UX-State-Machine
   const scanCtrl = initScanScreen({
+    // ── Capture: Detektor laufen lassen, Ergebnis an Scan-Screen übergeben ──
     onCapture: (imageData) => {
-      // P3b: Erkennung + Mapping
       const markers = detectMarkers(imageData);
       const result  = markersToUnits(markers, _scanArmy);
-      // P3c: result.status / result.matches → Vorschlag-Karte hier einhängen
-      console.log('[Reticle] Scan-Ergebnis:', result);
+      scanCtrl.showResult(result);              // P3c: State Machine
+    },
+
+    // ── Confirm: Einheit persistieren ──
+    onConfirm: async ({ unitId, newCount }) => {
+      if (!_scanArmy) return;
+      const unit = _scanArmy.units.find((u) => u.id === unitId);
+      if (!unit) return;
+
+      unit.status    = 'active';
+      unit.scannedAt = new Date().toISOString();
+      if (newCount !== unit.count) unit.count = newCount;
+
+      // totalPoints neu berechnen
+      _scanArmy.totalPoints = _scanArmy.units.reduce((s, u) => s + (u.points || 0), 0);
+
+      try {
+        await saveArmy(_scanArmy);
+      } catch (err) {
+        console.error('[Reticle] saveArmy failed:', err);
+      }
     },
     onBack: async () => {
       // Stream ist bereits gestoppt (scan.js ruft stopCamera vor onBack)

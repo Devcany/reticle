@@ -92,6 +92,62 @@ Reticle nutzt das Devcany-Designsystem: schwarz / Neongelb / Neon-Rot.
 
 ---
 
+## Scan-Flow (P3c — vollständiger Loop)
+
+### Überblick
+
+```
+Kamera-Feed läuft
+      │
+      ▼ Tap auf Auslöser
+Frame captured → detectMarkers() → markersToUnits()
+      │
+      ├─ 1 klarer Treffer ──────► Vorschlag-Karte (proposing)
+      │                               ├─ BESTÄTIGEN → Einheit gespeichert, Counter +1
+      │                               └─ Verwerfen  → idle, neue Chance
+      │
+      ├─ Mehrere Treffer ───────► Auswahl-Karte (ambiguous, orange Ecken)
+      │                               ├─ Tap auf Einheit → proposing
+      │                               ├─ Näher ran  → idle
+      │                               └─ Manuell    → Einheiten-Picker
+      │
+      ├─ Kein Marker ───────────► Hinweis-Karte (none)
+      │                               ├─ Näher ran  → idle
+      │                               └─ Manuell    → Einheiten-Picker
+      │
+      └─ Bereits erkannt ───────► Duplikat-Karte (duplicate)
+                                      ├─ Trotzdem überschreiben → proposing
+                                      └─ OK         → idle
+```
+
+### Zustandsmaschine (`scan.js`)
+
+| State | Sichtbar | Eckmarker |
+|---|---|---|
+| `idle` | Kamera-Feed, Auslöser | Neongelb |
+| `proposing` | Vorschlag-Karte (1 Treffer) | Neongelb |
+| `ambiguous` | Auswahl-Karte (Top-3) | Orange |
+| `none` | "Kein Marker erkannt" | Neongelb |
+| `duplicate` | "Bereits erkannt" | Neongelb |
+| `manual` | Einheiten-Picker (Overlay) | — |
+
+### Bestätigen-Aktion
+
+Nach "BESTÄTIGEN":
+- `unit.status = 'active'`
+- `unit.scannedAt = new Date().toISOString()`
+- Modellanzahl wird gespeichert falls manuell geändert
+- Eckmarker pulsen kurz grün
+- Counter oben links zählt hoch (`3 / 8`)
+
+### Manuell-Picker
+
+Erreichbar über "Manuell"-Button in `ambiguous`- und `none`-Zustand.
+Zeigt alle Einheiten ohne `scannedAt`. Tap → direkt in `proposing`-State.
+Nützlich wenn Marker nicht lesbar ist.
+
+---
+
 ## Wie der Detektor funktioniert
 
 ### Kurz
@@ -207,7 +263,7 @@ Falls die Kamera-Erlaubnis abgelehnt wurde:
 | **2** | Marker-Generierung (Druckbogen) | ✅ Done |
 | **3a** | Kamera & Live-Preview | ✅ Done |
 | **3b** | ArUco-Erkennung & Mapping | ✅ Done |
-| 3c | Vorschlag-Karte & Fallback-UX | ⬜ Open |
+| **3c** | Vorschlag-Karte & Bestätigen-Flow | ✅ Done |
 | 4 | Dashboard (KPIs, Live-Edit) | ⬜ Open |
 
 ---
