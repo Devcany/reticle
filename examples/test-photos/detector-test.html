@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <title>Reticle — Detektor-Test</title>
+  <style>
+    body { font-family: monospace; background: #0a0a0a; color: #fff; padding: 1.5rem; }
+    h1   { color: #d4ff00; margin-bottom: 1rem; font-size: 1rem; letter-spacing: 0.1em; }
+    .test { display: flex; gap: 1.5rem; align-items: flex-start; margin-bottom: 2rem;
+            border: 1px solid #1a1a1a; border-radius: 8px; padding: 1rem; }
+    .test img { width: 200px; height: auto; image-rendering: pixelated; border: 1px solid #333; }
+    .test-info h2 { color: #d4ff00; font-size: 0.875rem; margin-bottom: 0.5rem; }
+    .test-info p  { color: #888; font-size: 0.75rem; margin-bottom: 0.25rem; }
+    .result { margin-top: 0.75rem; padding: 0.5rem; background: #111;
+              border-radius: 4px; font-size: 0.75rem; white-space: pre-wrap; }
+    .result.found  { color: #d4ff00; }
+    .result.none   { color: #888; }
+    .result.error  { color: #ff2e4d; }
+    button { background: #d4ff00; color: #000; border: none; padding: 0.5rem 1rem;
+             border-radius: 4px; cursor: pointer; font-family: monospace;
+             font-weight: 700; font-size: 0.8125rem; margin-top: 0.5rem; }
+    #log   { color: #555; font-size: 0.7rem; margin-top: 2rem; }
+  </style>
+</head>
+<body>
+
+<h1>RETICLE — DETEKTOR-TEST (P3b)</h1>
+<p style="color:#888;font-size:0.75rem;margin-bottom:1.5rem">
+  Testet detectMarkers() + markersToUnits() direkt im Browser.<br>
+  Mapping: IDs 0–6 = unit-001 bis unit-007 (Beispiel-Armee, per-unit).
+</p>
+
+<div id="tests"></div>
+
+<div id="log">
+  <p>→ Details in DevTools Console (F12)</p>
+</div>
+
+<!-- Vendor globals (relative zum Repo-Root) -->
+<script src="../../vendor/cv.js"></script>
+<script src="../../vendor/aruco.js"></script>
+
+<script type="module">
+import { detectMarkers, markersToUnits } from '../../detector.js';
+
+// Minimal-Mapping für Tests (entspricht Beispiel-Armee, per-unit, IDs 0-6)
+const SAMPLE_ARMY = {
+  id: 'army-test',
+  name: 'Test Army',
+  units: [
+    { id: 'unit-001', name: 'Intercessors',         count: 6,  points: 120 },
+    { id: 'unit-002', name: 'Assault Intercessors', count: 5,  points: 95  },
+    { id: 'unit-003', name: 'Bladeguard Veteran',   count: 3,  points: 120 },
+    { id: 'unit-004', name: 'Eradicators',          count: 3,  points: 0   },
+    { id: 'unit-005', name: 'Outriders',            count: 3,  points: 90  },
+    { id: 'unit-006', name: 'Tactical Squad',       count: 10, points: 130 },
+    { id: 'unit-007', name: 'Librarian',            count: 1,  points: 85  },
+  ],
+  markerMapping: {
+    mode: 'per-unit',
+    entries: [
+      { markerId: 0, unitId: 'unit-001', modelIndex: null },
+      { markerId: 1, unitId: 'unit-002', modelIndex: null },
+      { markerId: 2, unitId: 'unit-003', modelIndex: null },
+      { markerId: 3, unitId: 'unit-004', modelIndex: null },
+      { markerId: 4, unitId: 'unit-005', modelIndex: null },
+      { markerId: 5, unitId: 'unit-006', modelIndex: null },
+      { markerId: 6, unitId: 'unit-007', modelIndex: null },
+    ],
+  },
+};
+
+const UNIT_MAP = Object.fromEntries(SAMPLE_ARMY.units.map(u => [u.id, u]));
+
+const TESTS = [
+  { file: 'test-single.png',  label: 'Einzelner Marker ID 0',          expect: 'found (1 Match: Intercessors)' },
+  { file: 'test-multi.png',   label: 'Drei Marker IDs 0, 1, 2',        expect: 'found (3 Matches, sortiert nach Größe)' },
+  { file: 'test-none.png',    label: 'Kein Marker (Gitternetz)',         expect: 'none' },
+  { file: 'test-foreign.png', label: 'Fremdmarker ID 99 (nicht in Mapping)', expect: 'none (Detektor sieht 99, Mapping filtert)' },
+];
+
+function runTest(imgEl, resultEl) {
+  // Frame in Canvas ziehen
+  const canvas = document.createElement('canvas');
+  canvas.width  = imgEl.naturalWidth;
+  canvas.height = imgEl.naturalHeight;
+  const ctx = canvas.getContext('2d');
+  ctx.drawImage(imgEl, 0, 0);
+  const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+
+  const markers = detectMarkers(imageData);
+  const result  = markersToUnits(markers, SAMPLE_ARMY);
+
+  let text = `status: ${result.status}\n`;
+  if (result.matches.length) {
+    text += result.matches.map(m => {
+      const unit = UNIT_MAP[m.unitId];
+      return `  → ${unit?.name ?? m.unitId}  (markerID ${m.markerId}, ⌀ ${m.diagonal.toFixed(1)}px)`;
+    }).join('\n');
+  } else {
+    text += '  → keine Matches';
+  }
+
+  resultEl.textContent = text;
+  resultEl.className   = 'result ' + result.status;
+}
+
+// Aufbau der Test-Cards
+const container = document.getElementById('tests');
+for (const t of TESTS) {
+  const card = document.createElement('div');
+  card.className = 'test';
+
+  const img = document.createElement('img');
+  img.src = t.file;
+
+  const info = document.createElement('div');
+  info.className = 'test-info';
+  info.innerHTML = `
+    <h2>${t.file}</h2>
+    <p>${t.label}</p>
+    <p style="color:#555">Erwartung: ${t.expect}</p>
+  `;
+
+  const resultEl = document.createElement('div');
+  resultEl.className = 'result none';
+  resultEl.textContent = '— noch nicht getestet —';
+
+  const btn = document.createElement('button');
+  btn.textContent = '▶ Testen';
+  btn.addEventListener('click', () => {
+    if (!img.complete || img.naturalWidth === 0) {
+      resultEl.textContent = 'Bild nicht geladen';
+      resultEl.className = 'result error';
+      return;
+    }
+    runTest(img, resultEl);
+  });
+
+  info.appendChild(resultEl);
+  info.appendChild(btn);
+  card.appendChild(img);
+  card.appendChild(info);
+  container.appendChild(card);
+}
+
+// Auto-Run wenn alle Bilder geladen
+window.addEventListener('load', () => {
+  document.querySelectorAll('.test img').forEach((img, i) => {
+    const resultEl = document.querySelectorAll('.result')[i];
+    const btn = document.querySelectorAll('button')[i];
+    if (img.complete && img.naturalWidth > 0) runTest(img, resultEl);
+    btn.textContent = '↺ Erneut testen';
+  });
+});
+</script>
+
+</body>
+</html>

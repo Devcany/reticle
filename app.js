@@ -7,6 +7,7 @@ import { initSetupScreen } from './setup.js';
 import { initImportScreen } from './import.js';
 import { initManualScreen } from './manual.js';
 import { initScanScreen, startScan, stopCamera } from './scan.js';
+import { detectMarkers, markersToUnits } from './detector.js';
 
 // --- Service Worker ---
 if ('serviceWorker' in navigator) {
@@ -112,10 +113,15 @@ function wireStaticListeners(manualCtrl, scanCtrl) {
       const activeId   = await getActiveArmyId();
       const armies     = await getAllArmies();
       const activeArmy = activeId ? armies.find((a) => a.id === activeId) : null;
-      scanCtrl.setArmy(activeArmy || null);            // Label nachziehen
+      _scanArmy = activeArmy || null;                  // Detektor-Kontext setzen
+      scanCtrl.setArmy(_scanArmy);                     // Label nachziehen
     });
   }
 }
+
+// ─── Aktive Armee für Scan-Kontext (wird beim Scan-Start gesetzt) ──────────
+// Referenz bleibt bis zum nächsten Scan-Start aktuell.
+let _scanArmy = null;
 
 // --- Init ---
 async function initApp() {
@@ -132,11 +138,14 @@ async function initApp() {
     navigate('screen-home');
   }
 
-  // Scan-Screen: Capture-Callback (Vorbereitung P3b) + Zurück-Navigation
+  // Scan-Screen: ArUco-Erkennung + Mapping in onCapture
   const scanCtrl = initScanScreen({
-    onCapture: (imageData, canvas) => {
-      // P3b: ArUco-Erkennung hier einhängen
-      console.log('[Reticle] Frame captured — bereit fuer P3b:', imageData.width, 'x', imageData.height);
+    onCapture: (imageData) => {
+      // P3b: Erkennung + Mapping
+      const markers = detectMarkers(imageData);
+      const result  = markersToUnits(markers, _scanArmy);
+      // P3c: result.status / result.matches → Vorschlag-Karte hier einhängen
+      console.log('[Reticle] Scan-Ergebnis:', result);
     },
     onBack: async () => {
       // Stream ist bereits gestoppt (scan.js ruft stopCamera vor onBack)

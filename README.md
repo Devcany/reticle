@@ -92,6 +92,64 @@ Reticle nutzt das Devcany-Designsystem: schwarz / Neongelb / Neon-Rot.
 
 ---
 
+## Wie der Detektor funktioniert
+
+### Kurz
+
+`detector.js` nimmt ein `ImageData`-Objekt (RGBA, von canvas) und liefert eine strukturierte Antwort:
+
+```
+detectMarkers(imageData)
+  → [{ id, corners, diagonal }, ...]   sortiert nach Größe ↓
+
+markersToUnits(markers, army)
+  → { status: 'found' | 'none', matches: [{ unitId, modelIndex, markerId, diagonal }] }
+```
+
+### Ablauf
+
+1. `AR.Detector.detect(imageData)` (aus `vendor/aruco.js`) sucht quadratische Konturen im Bild.
+2. Für jede gefundene Kontur: adaptiver Threshold → homografische Entzerrung → Hamming-Dekodierung → Marker-ID.
+3. Ergebnisse werden nach Pixeldiagonale absteigend sortiert (größter = nächster zur Kamera = wahrscheinlichster Treffer).
+4. `markersToUnits()` gleicht die IDs gegen `army.markerMapping.entries` ab. Nicht gematchte IDs werden gefiltert und geloggt.
+5. Bei mehreren Treffern: alle zurückgeben — Auswahl-UX kommt in P3c.
+
+### DevTools-Test
+
+```
+detectMarkers → 1 Marker erkannt: ID 0 (⌀ 84.0 px)
+markersToUnits → status: found | Matches: [{ unitId: 'unit-001', markerId: 0, ... }]
+```
+
+### Interaktiver Browser-Test
+
+Öffne `examples/test-photos/detector-test.html` über einen lokalen Webserver:
+
+```bash
+cd reticle && python3 -m http.server 8080
+# → http://localhost:8080/examples/test-photos/detector-test.html
+```
+
+Seite lädt die 4 Test-PNGs und führt `detectMarkers` + `markersToUnits` aus. Ergebnisse erscheinen direkt und in der Browser-Konsole.
+
+### Test-Bilder (`examples/test-photos/`)
+
+| Datei | Inhalt | Erwartetes Ergebnis |
+|---|---|---|
+| `test-single.png` | Marker ID 0 auf weissem Grund | `found` — unit-001 |
+| `test-multi.png` | Marker IDs 0, 1, 2 nebeneinander | `found` — 3 Matches, nach Groesse sortiert |
+| `test-none.png` | Kein Marker, Gitternetz | `none` |
+| `test-foreign.png` | Marker ID 99 (nicht im Mapping) | `none` (Detektor erkennt, Mapping filtert) |
+
+### Technisches
+
+- `vendor/cv.js` + `vendor/aruco.js` werden als Globals vor dem ES-Modul geladen (`<script src="...">`).
+- `AR.Detector`-Instanz wird lazy erzeugt und wiederverwendet (teurer Konstruktor).
+- `detectMarkers` laeuft nur bei Tap auf Auslöser — kein Live-Inferenz-Overhead.
+- Ziel-Latenz: unter 500ms auch auf älteren Mittelklasse-Smartphones.
+
+---
+
 ## Scan benutzen
 
 ### Voraussetzungen
@@ -148,7 +206,7 @@ Falls die Kamera-Erlaubnis abgelehnt wurde:
 | **1** | Listen-Datenmodell & Eingabe-Flow | ✅ Done |
 | **2** | Marker-Generierung (Druckbogen) | ✅ Done |
 | **3a** | Kamera & Live-Preview | ✅ Done |
-| 3b | ArUco-Erkennung | ⬜ Open |
+| **3b** | ArUco-Erkennung & Mapping | ✅ Done |
 | 3c | Vorschlag-Karte & Fallback-UX | ⬜ Open |
 | 4 | Dashboard (KPIs, Live-Edit) | ⬜ Open |
 
