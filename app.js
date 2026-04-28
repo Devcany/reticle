@@ -1,13 +1,15 @@
 // Reticle — app.js
 // Entry point. SW registration + app init + screen routing.
 
-import { getAllArmies, getActiveArmyId, setActiveArmyId, getArmy, saveArmy } from './storage.js';
+import { getAllArmies, getActiveArmyId, setActiveArmyId, saveArmy } from './storage.js';
 import { showScreen, navigate, goBack } from './ui.js';
 import { initSetupScreen } from './setup.js';
 import { initImportScreen } from './import.js';
 import { initManualScreen } from './manual.js';
 import { initScanScreen } from './scan.js';
 import { detectMarkers, markersToUnits } from './detector.js';
+import { renderDashboard } from './dashboard.js';
+import { initEditScreen, openUnit } from './edit.js';
 
 // --- Service Worker ---
 if ('serviceWorker' in navigator) {
@@ -19,40 +21,15 @@ if ('serviceWorker' in navigator) {
   });
 }
 
-// --- Home screen ---
-function renderHome(army) {
-  const titleEl = document.getElementById('home-title');
-  const cardEl  = document.getElementById('home-army-card');
-
-  if (titleEl) titleEl.textContent = army.name.toUpperCase();
-
-  if (cardEl) {
-    const unclear = army.units.filter((u) => u.status === 'unclear').length;
-    cardEl.innerHTML = `
-      <div class="home-stats">
-        <div class="home-stat">
-          <span class="home-stat-label">EINHEITEN</span>
-          <span class="home-stat-value">${army.units.length}</span>
-        </div>
-        <div class="home-stat">
-          <span class="home-stat-label">PUNKTE</span>
-          <span class="home-stat-value">${army.totalPoints}</span>
-        </div>
-      </div>
-      ${unclear > 0 ? `<p class="home-warn">${unclear} Eintrag${unclear !== 1 ? 'e' : ''} benoetigen Klaerung</p>` : ''}
-      <ul class="home-unit-list">
-        ${army.units.map((u) => `
-          <li class="home-unit${u.status === 'unclear' ? ' home-unit--unclear' : ''}">
-            <span class="home-unit-name">${u.name}</span>
-            <span class="home-unit-meta">&times;${u.count}&nbsp;&middot;&nbsp;${u.points}&nbsp;Pkt.</span>
-          </li>
-        `).join('')}
-      </ul>
-      <a href="print.html?armyId=${army.id}" class="btn btn--outline btn--block btn--print">
-        &#9634; Marker drucken
-      </a>
-    `;
-  }
+// --- Dashboard (P4 ersetzt renderHome) ---
+function showDashboard(army) {
+  renderDashboard(army, {
+    onUnitTap: (unit, idx) => {
+      openUnit(unit, army, idx);
+      navigate('screen-edit');
+    },
+  });
+  navigate('screen-home');
 }
 
 // --- List select screen ---
@@ -69,8 +46,7 @@ function renderListSelect(armies) {
     `;
     btn.addEventListener('click', async () => {
       await setActiveArmyId(army.id);
-      renderHome(army);
-      navigate('screen-home');
+      showDashboard(army);
     });
     container.appendChild(btn);
   });
@@ -86,35 +62,33 @@ function wireStaticListeners(manualCtrl, scanCtrl) {
     });
   }
 
-  const homeBack = document.getElementById('home-back');
-  if (homeBack) {
-    homeBack.addEventListener('click', async () => {
-      const armies = await getAllArmies();
-      if (armies.length > 1) {
-        renderListSelect(armies);
-        showScreen('screen-list-select');
-      } else {
-        showScreen('screen-setup');
-      }
-    });
+  // Header-Zurück und Footer-Übersicht im Dashboard tun dasselbe
+  async function goToOverview() {
+    const armies = await getAllArmies();
+    if (armies.length > 1) {
+      renderListSelect(armies);
+      showScreen('screen-list-select');
+    } else {
+      showScreen('screen-setup');
+    }
   }
 
-  // "Scan starten" Button auf dem Home-Screen
+  document.getElementById('home-back')?.addEventListener('click', goToOverview);
+  document.getElementById('home-overview-btn')?.addEventListener('click', goToOverview);
+
+  // "SCAN starten" Button auf dem Dashboard-Footer
   const homeScanBtn = document.getElementById('home-scan-btn');
   if (homeScanBtn) {
     homeScanBtn.addEventListener('click', async () => {
       // ⚠️  iOS Safari: getUserMedia muss synchron im Gesture-Handler aufgerufen werden.
-      // Kein await vor startCamera() — sonst verliert iOS den Gesture-Context und
-      // zeigt den Permission-Dialog nicht.
       navigate('screen-scan');
       scanCtrl.startCamera();                          // getUserMedia wird HIER gefeuert
 
-      // Erst NACH dem Camera-Start dürfen async-Calls folgen
       const activeId   = await getActiveArmyId();
       const armies     = await getAllArmies();
       const activeArmy = activeId ? armies.find((a) => a.id === activeId) : null;
-      _scanArmy = activeArmy || null;                  // Detektor-Kontext setzen
-      scanCtrl.setArmy(_scanArmy);                     // Label nachziehen
+      _scanArmy = activeArmy || null;
+      scanCtrl.setArmy(_scanArmy);
     });
   }
 }
@@ -128,15 +102,8 @@ async function initApp() {
   const armies   = await getAllArmies();
   const hasArmies = armies.length > 0;
 
-  function onImportDone(army) {
-    renderHome(army);
-    navigate('screen-home');
-  }
-
-  function onManualDone(army) {
-    renderHome(army);
-    navigate('screen-home');
-  }
+  function onImportDone(army) { showDashboard(army); }
+  function onManualDone(army) { showDashboard(army); }
 
   // Scan-Screen: Erkennung + Mapping + UX-State-Machine
   const scanCtrl = initScanScreen({
@@ -153,30 +120,48 @@ async function initApp() {
       const unit = _scanArmy.units.find((u) => u.id === unitId);
       if (!unit) return;
 
+      // maxCount beim ersten Scan setzen (Soll-Stärke)
+      if (!unit.maxCount) unit.maxCount = unit.count;
+
       unit.status    = 'active';
       unit.scannedAt = new Date().toISOString();
-      if (newCount !== unit.count) unit.count = newCount;
-
-      // totalPoints neu berechnen
-      _scanArmy.totalPoints = _scanArmy.units.reduce((s, u) => s + (u.points || 0), 0);
-
-      try {
-        await saveArmy(_scanArmy);
-      } catch (err) {
-        console.error('[Reticle] saveArmy failed:', err);
+      if (newCount !== unit.count) {
+        unit.count = newCount;
+        // maxCount überschreiben wenn Scan-Count höher ist (z.B. manuell korrigiert)
+        if (newCount > (unit.maxCount || 0)) unit.maxCount = newCount;
       }
+
+      _scanArmy.totalPoints = _scanArmy.units.reduce((s, u) => s + (u.points || 0), 0);
+      try { await saveArmy(_scanArmy); }
+      catch (err) { console.error('[Reticle] saveArmy failed:', err); }
     },
+
     onBack: async () => {
-      // Stream ist bereits gestoppt (scan.js ruft stopCamera vor onBack)
+      // Stream bereits gestoppt (scan.js)
       const armies     = await getAllArmies();
       const activeId   = await getActiveArmyId();
       const activeArmy = activeId ? armies.find((a) => a.id === activeId) : null;
       if (activeArmy) {
-        renderHome(activeArmy);
-        showScreen('screen-home');
+        showDashboard(activeArmy);
       } else {
         goBack('screen-home');
       }
+    },
+  });
+
+  // ── Edit-Screen (P4) ──
+  initEditScreen({
+    onBack: (army) => {
+      showDashboard(army);
+    },
+    onNextScan: () => {
+      // Direkt zum Scan — iOS-safe (kein await vor startCamera)
+      navigate('screen-scan');
+      scanCtrl.startCamera();
+    },
+    onSave: async (army) => {
+      try { await saveArmy(army); }
+      catch (err) { console.error('[Reticle] edit save failed:', err); }
     },
   });
 
@@ -192,12 +177,10 @@ async function initApp() {
   if (armies.length === 0) {
     showScreen('screen-setup');
   } else if (activeArmy) {
-    renderHome(activeArmy);
-    showScreen('screen-home');
+    showDashboard(activeArmy);
   } else if (armies.length === 1) {
     await setActiveArmyId(armies[0].id);
-    renderHome(armies[0]);
-    showScreen('screen-home');
+    showDashboard(armies[0]);
   } else {
     renderListSelect(armies);
     showScreen('screen-list-select');

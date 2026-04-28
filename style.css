@@ -1069,6 +1069,445 @@ body {
   line-height: 1.5;
 }
 
+/* ===================== DASHBOARD (P4) ===================== */
+
+/* LIVE-Badge im Header */
+.db-live {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.625rem;
+  font-weight: 700;
+  font-family: var(--font-mono);
+  letter-spacing: 0.12em;
+  color: var(--text-secondary);
+  flex-shrink: 0;
+}
+
+.db-live-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #00e676;
+  box-shadow: 0 0 6px rgba(0,230,118,0.7);
+  animation: db-live-pulse 2s ease-in-out infinite;
+}
+
+@keyframes db-live-pulse {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.4; }
+}
+
+/* Scrollbarer Body */
+.db-scroll {
+  flex: 1;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+/* ── Hero-Block ── */
+.db-hero {
+  display: flex;
+  align-items: center;
+  padding: 1.25rem 1.25rem 1rem;
+  gap: 0;
+}
+
+.db-hero-active,
+.db-hero-lost {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.db-hero-active { flex: 1; }
+.db-hero-lost   { flex: 0 0 auto; text-align: right; }
+
+.db-hero-label {
+  font-size: 0.625rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+  text-transform: uppercase;
+}
+
+.db-hero-pts {
+  font-size: 2.75rem;    /* ~44px */
+  font-weight: 700;
+  font-family: var(--font-mono);
+  color: var(--accent);
+  line-height: 1;
+  letter-spacing: -0.02em;
+}
+
+.db-hero-loss {
+  font-size: 1.75rem;    /* ~28px */
+  font-weight: 700;
+  font-family: var(--font-mono);
+  color: var(--loss);
+  line-height: 1;
+}
+
+.db-hero-sep {
+  width: 1px;
+  height: 40px;
+  background: var(--border);
+  margin: 0 1.25rem;
+  flex-shrink: 0;
+}
+
+/* ── Statusbalken ── */
+.db-bar-wrap {
+  display: flex;
+  height: 6px;
+  margin: 0;
+  overflow: hidden;
+}
+
+.db-bar-seg {
+  transition: flex 0.5s ease;
+  min-width: 0;
+}
+
+.db-bar-seg--active { background: var(--accent); }
+.db-bar-seg--lost   { background: var(--loss);   }
+
+/* ── KPI-Boxen ── */
+.db-kpi-row {
+  display: flex;
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+  margin-top: 0;
+}
+
+.db-kpi-box {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.2rem;
+  padding: 0.75rem 0.5rem;
+  border-right: 1px solid var(--border);
+}
+
+.db-kpi-box:last-child { border-right: none; }
+
+.db-kpi-label {
+  font-size: 0.5625rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+  text-transform: uppercase;
+}
+
+.db-kpi-val-wrap {
+  display: flex;
+  align-items: baseline;
+  gap: 0.25rem;
+}
+
+.db-kpi-val {
+  font-size: 1.25rem;
+  font-weight: 700;
+  font-family: var(--font-mono);
+  color: var(--text-primary);
+  line-height: 1;
+}
+
+.db-kpi-val--loss { color: var(--loss); }
+
+.db-kpi-delta {
+  font-size: 0.75rem;
+  font-weight: 700;
+  font-family: var(--font-mono);
+  color: var(--loss);
+}
+
+/* ── Einheitenliste ── */
+.db-unit-list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  padding: 0.5rem 0;
+  margin: 0;
+}
+
+/* Einheitenkarte */
+.unit-card {
+  position: relative;
+  padding: 0 1.25rem 0 calc(1.25rem + 4px);
+  border-left: 4px solid transparent;
+  transition: background 0.12s;
+}
+
+.unit-card::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 8px;
+  bottom: 8px;
+  width: 4px;
+  border-radius: 0 2px 2px 0;
+}
+
+.unit-card--full    { border-left-color: var(--accent); }
+.unit-card--reduced { border-left-color: var(--loss);   }
+.unit-card--fallen  { border-left-color: #4a0a14; opacity: 0.55; }
+
+.unit-card:active { background: rgba(255,255,255,0.03); }
+
+.unit-card-inner {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.625rem 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.unit-card:last-child .unit-card-inner { border-bottom: none; }
+
+.unit-card-name {
+  flex: 1;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.unit-card-name--fallen {
+  text-decoration: line-through;
+  color: var(--text-muted);
+}
+
+.unit-card-count {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  font-family: var(--font-mono);
+  flex-shrink: 0;
+}
+
+.unit-card-pts {
+  font-size: 0.75rem;
+  color: var(--text-tertiary);
+  font-family: var(--font-mono);
+  flex-shrink: 0;
+  min-width: 52px;
+  text-align: right;
+}
+
+/* Print-Link Abstand */
+.db-print-wrap {
+  padding: 0.75rem 1.25rem 1rem;
+}
+
+/* ── Footer ── */
+.db-footer {
+  display: flex;
+  gap: 0.5rem;
+  padding: 0.75rem 1.25rem max(0.75rem, env(safe-area-inset-bottom, 0.75rem));
+  background: var(--bg);
+  border-top: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+.db-footer-btn {
+  flex: 1;
+  font-size: 0.8125rem;
+  letter-spacing: 0.06em;
+}
+
+/* ===================== LIVE-EDIT SCREEN (P4) ===================== */
+
+/* Counter rechts im Header */
+.edit-counter {
+  font-size: 0.75rem;
+  font-weight: 700;
+  font-family: var(--font-mono);
+  color: var(--text-secondary);
+  letter-spacing: 0.06em;
+  flex-shrink: 0;
+}
+
+/* Namens-Karte mit Status-Akzent */
+.edit-name-card {
+  border-left: 4px solid var(--border);
+  transition: border-color 0.2s;
+}
+
+.edit-name-card--full    { border-left-color: var(--accent); }
+.edit-name-card--reduced { border-left-color: var(--loss);   }
+.edit-name-card--fallen  { border-left-color: #4a0a14; }
+
+.edit-unit-name {
+  font-size: 1.125rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  line-height: 1.25;
+}
+
+.edit-unit-sub {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  font-family: var(--font-mono);
+  margin-top: 0.2rem;
+}
+
+/* Count-Karte */
+.edit-count-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.625rem;
+}
+
+.edit-section-label {
+  font-size: 0.5625rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+  text-transform: uppercase;
+}
+
+.edit-count-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+/* Große Plus/Minus-Buttons (40×40) */
+.edit-count-btn {
+  width: 48px;
+  height: 48px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--bg-elevated);
+  color: var(--text-secondary);
+  font-size: 1.5rem;
+  font-family: var(--font-mono);
+  cursor: pointer;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.12s, color 0.12s, border-color 0.12s;
+}
+
+.edit-count-btn:hover:not(:disabled) {
+  background: var(--border);
+  color: var(--text-primary);
+}
+
+.edit-count-btn:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+.edit-count-display {
+  display: flex;
+  align-items: baseline;
+  gap: 0.25rem;
+  justify-content: center;
+  flex: 1;
+}
+
+.edit-count-val {
+  font-size: 2.5rem;
+  font-weight: 700;
+  font-family: var(--font-mono);
+  color: var(--text-primary);
+  line-height: 1;
+}
+
+.edit-count-max {
+  font-size: 1rem;
+  font-family: var(--font-mono);
+  color: var(--text-tertiary);
+  line-height: 1;
+}
+
+.edit-was {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+  padding-top: 0.125rem;
+}
+
+/* Profile-Block */
+.edit-profile-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.625rem;
+}
+
+.edit-profile-placeholder {
+  font-size: 0.8125rem;
+  color: var(--text-tertiary);
+  font-family: var(--font-mono);
+  text-align: center;
+  padding: 0.75rem 0;
+  letter-spacing: 0.08em;
+}
+
+/* Punkte-Block */
+.edit-pts-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.625rem;
+}
+
+.edit-pts-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.edit-pts-val {
+  font-size: 2rem;
+  font-weight: 700;
+  font-family: var(--font-mono);
+  color: var(--accent);
+  line-height: 1;
+}
+
+.edit-pts-detail {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.125rem;
+}
+
+.edit-was-inline {
+  font-size: 0.6875rem;
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+}
+
+.edit-pts-delta {
+  font-size: 0.875rem;
+  font-weight: 700;
+  font-family: var(--font-mono);
+  color: var(--loss);
+}
+
+/* Nächster-Scan-Button */
+.edit-next-btn {
+  font-size: 0.875rem;
+  padding: 0.9375rem;
+  letter-spacing: 0.1em;
+  border-radius: var(--radius-lg);
+  margin-top: 0.5rem;
+}
+
 /* ===================== HOME SCAN BUTTON ===================== */
 .btn--scan-start {
   font-size: 0.9375rem;

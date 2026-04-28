@@ -126,18 +126,128 @@
     </main>
   </div>
 
-  <!-- ===================== SCREEN: Home ===================== -->
+  <!-- ===================== SCREEN: Home (Dashboard P4) ===================== -->
   <div id="screen-home" class="screen">
+
+    <!-- Header -->
     <header class="s-header">
-      <button id="home-back" class="s-back" aria-label="Zurueck">&#8592;</button>
+      <button id="home-back" class="s-back" aria-label="Uebersicht">&#8592;</button>
       <span id="home-title" class="s-title">RETICLE</span>
-      <span class="s-dot"></span>
+      <span class="db-live"><span class="db-live-dot"></span>LIVE</span>
     </header>
+
+    <!-- Scrollbarer Dashboard-Body -->
+    <div class="db-scroll">
+
+      <!-- Hero: Punkte aktiv + Verluste -->
+      <div class="db-hero">
+        <div class="db-hero-active">
+          <span class="db-hero-label">Punkte aktiv</span>
+          <span id="db-active-pts" class="db-hero-pts">&#8212;</span>
+        </div>
+        <div class="db-hero-sep"></div>
+        <div class="db-hero-lost">
+          <span class="db-hero-label">Verluste</span>
+          <span id="db-lost-pts" class="db-hero-loss">&#8212;</span>
+        </div>
+      </div>
+
+      <!-- Zweigeteilter Statusbalken -->
+      <div class="db-bar-wrap">
+        <div id="db-bar-active" class="db-bar-seg db-bar-seg--active"></div>
+        <div id="db-bar-lost"   class="db-bar-seg db-bar-seg--lost"></div>
+      </div>
+
+      <!-- 3 KPI-Boxen -->
+      <div class="db-kpi-row">
+        <div class="db-kpi-box">
+          <span class="db-kpi-label">Einheiten</span>
+          <span id="db-kpi-units" class="db-kpi-val">&#8212;</span>
+        </div>
+        <div class="db-kpi-box">
+          <span class="db-kpi-label">Modelle</span>
+          <div class="db-kpi-val-wrap">
+            <span id="db-kpi-models" class="db-kpi-val">&#8212;</span>
+            <span id="db-kpi-models-delta" class="db-kpi-delta" hidden></span>
+          </div>
+        </div>
+        <div class="db-kpi-box">
+          <span class="db-kpi-label">Verluste</span>
+          <span id="db-kpi-loss" class="db-kpi-val db-kpi-val--loss">&#8212;</span>
+        </div>
+      </div>
+
+      <!-- Einheitenliste -->
+      <ul id="db-unit-list" class="db-unit-list"></ul>
+
+      <!-- Print-Link (wird dynamisch befüllt) -->
+      <div id="db-print-wrap" class="db-print-wrap"></div>
+
+    </div><!-- .db-scroll -->
+
+    <!-- Footer: Übersicht + SCAN -->
+    <footer class="db-footer">
+      <button id="home-overview-btn" class="btn btn--outline db-footer-btn">&#8592; &#220;bersicht</button>
+      <button id="home-scan-btn"     class="btn btn--accent  db-footer-btn">&#9711;&nbsp;+&nbsp;SCAN</button>
+    </footer>
+
+  </div>
+
+  <!-- ===================== SCREEN: Edit (Live-Edit P4) ===================== -->
+  <div id="screen-edit" class="screen">
+
+    <!-- Header -->
+    <header class="s-header">
+      <button id="edit-back" class="s-back" aria-label="Zurueck">&#8592;</button>
+      <span id="edit-title" class="s-title">EINHEIT</span>
+      <span id="edit-counter" class="edit-counter">&#8212;</span>
+    </header>
+
     <main class="s-body">
-      <div id="home-army-card" class="card"></div>
-      <button id="home-scan-btn" class="btn btn--accent btn--block btn--scan-start">
-        &#9711;&nbsp; SCAN STARTEN
+
+      <!-- Einheiten-Namens-Karte -->
+      <div id="edit-name-card" class="card edit-name-card">
+        <div id="edit-unit-name" class="edit-unit-name"></div>
+        <div id="edit-unit-sub"  class="edit-unit-sub"></div>
+      </div>
+
+      <!-- Modell-Count (Plus/Minus) -->
+      <div class="card edit-count-card">
+        <span class="edit-section-label">Modelle</span>
+        <div class="edit-count-row">
+          <button id="edit-minus" class="edit-count-btn" aria-label="Weniger">&#8722;</button>
+          <div class="edit-count-display">
+            <span id="edit-count-val" class="edit-count-val">&#8212;</span>
+            <span id="edit-count-max" class="edit-count-max"></span>
+          </div>
+          <button id="edit-plus"  class="edit-count-btn" aria-label="Mehr">+</button>
+        </div>
+        <div id="edit-count-was" class="edit-was" hidden></div>
+      </div>
+
+      <!-- Profil-Block (V1-Platzhalter) -->
+      <div class="card edit-profile-card">
+        <span class="edit-section-label">Profil</span>
+        <span class="edit-profile-placeholder">&#8212;&nbsp;V2&nbsp;&#8212;</span>
+      </div>
+
+      <!-- Punkte-Block -->
+      <div class="card edit-pts-card">
+        <span class="edit-section-label">Punkte</span>
+        <div class="edit-pts-row">
+          <span id="edit-pts-val" class="edit-pts-val">&#8212;</span>
+          <div class="edit-pts-detail">
+            <span id="edit-pts-was"   class="edit-was-inline"  hidden></span>
+            <span id="edit-pts-delta" class="edit-pts-delta"   hidden></span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Footer-Button -->
+      <button id="edit-next-scan" class="btn btn--accent btn--block edit-next-btn">
+        &#9711;&nbsp;N&#196;CHSTER SCAN
       </button>
+
     </main>
   </div>
 

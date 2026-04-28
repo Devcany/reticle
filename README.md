@@ -92,6 +92,54 @@ Reticle nutzt das Devcany-Designsystem: schwarz / Neongelb / Neon-Rot.
 
 ---
 
+## Im Spiel benutzen (P4 — V1 spielbereit)
+
+### Dashboard
+
+Nach dem Scan erscheint das Dashboard mit:
+
+- **Header:** Armeebezeichnung · `● LIVE`-Badge (grün, pulsierend)
+- **Hero-Block:** Punkte aktiv (Neongelb, groß) · Verluste (Neon-Rot) getrennt durch vertikale Linie
+- **Statusbalken:** Zweiteilig — gelb proportional zu aktiven Punkten, rot zu Verlusten
+- **3 KPI-Boxen:** Einheiten · Modelle (mit `−N` Verlust-Delta) · Verluste in Pkt.
+- **Einheitenliste:** Tap auf Einheit → Live-Edit-Screen
+
+**Status-Striche:**
+| Farbe | Bedeutung |
+|---|---|
+| Neongelb | Voll (`count == maxCount`) |
+| Neon-Rot | Angeschlagen (`0 < count < maxCount`) |
+| Dunkelrot + gedämpft | Gefallen (`count == 0`, Name durchgestrichen) |
+
+### Live-Edit-Screen
+
+Tap auf eine Einheit öffnet den Edit-Screen:
+
+1. **Counter oben rechts:** `04 / 08` — welche Einheit von wie vielen
+2. **Plus/Minus** — Modellanzahl ändern (min: 0, kein Limit)
+3. Wenn Anzahl von `maxCount` abweicht: `↓ war 6` erscheint
+4. **Punkte-Block** aktualisiert sich proportional:
+   - Aktuelle Punkte in Neongelb
+   - `war 120 · −20` rechts wenn Verluste vorhanden
+5. **NÄCHSTER SCAN** — navigiert direkt zum Scan-Screen
+
+**Automatisches Speichern:** Jedes Plus/Minus löst sofort ein `saveArmy()` aus. Kein separater Speichern-Button.
+
+### KPI-Berechnung (V1)
+
+| Feld | Formel |
+|---|---|
+| Punkte aktiv | Σ `unit.points` für alle Einheiten mit `count > 0` |
+| Verluste (Pkt.) | Σ `unit.points` für alle Einheiten mit `count == 0` |
+| Modelle | Σ `unit.count` aller aktiven Einheiten |
+| Verlust-Delta | Σ `(maxCount − count)` aller aktiven Einheiten |
+
+### `maxCount`-Feld
+
+Wird beim Anlegen einer Einheit gesetzt (Import, manuelle Eingabe, Scan-Bestätigung) und danach nie automatisch reduziert. Ist die Soll-Stärke des Trupps. Live-Edit liest `maxCount` als Referenzwert.
+
+---
+
 ## Scan-Flow (P3c — vollständiger Loop)
 
 ### Überblick
@@ -264,6 +312,7 @@ Falls die Kamera-Erlaubnis abgelehnt wurde:
 | **3a** | Kamera & Live-Preview | ✅ Done |
 | **3b** | ArUco-Erkennung & Mapping | ✅ Done |
 | **3c** | Vorschlag-Karte & Bestätigen-Flow | ✅ Done |
+| **4**  | Dashboard & Live-Edit | ✅ Done |
 | 4 | Dashboard (KPIs, Live-Edit) | ⬜ Open |
 
 ---

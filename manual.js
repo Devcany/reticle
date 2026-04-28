@@ -104,6 +104,7 @@ export function initManualScreen(onDone) {
       id: `unit-${String(seq).padStart(3, '0')}`,
       name,
       count,
+      maxCount: count,   // P4: Soll-Stärke = Anfangswert
       points: pts,
       status: 'active',
       scannedAt: null,

@@ -42,6 +42,7 @@ export function validateArmy(raw) {
       id: (typeof u.id === 'string' && u.id.trim()) ? u.id.trim() : `unit-${String(seq).padStart(3, '0')}`,
       name: rawName.slice(0, 100),
       count: 1,
+      maxCount: 1,   // P4: Soll-Stärke — wird beim Anlegen gesetzt, nie überschrieben
       points: 0,
       status: 'active',
       scannedAt: null,
@@ -56,7 +57,8 @@ export function validateArmy(raw) {
         problems.push(`"${unit.name}": Modellanzahl ungueltig (${u.count}), auf 1 gesetzt.`);
         unitUnclear = true;
       } else {
-        unit.count = count;
+        unit.count    = count;
+        unit.maxCount = count;   // P4: Soll-Stärke = importierter Wert
       }
     } else {
       problems.push(`"${unit.name}": Modellanzahl fehlt, auf 1 gesetzt.`);
