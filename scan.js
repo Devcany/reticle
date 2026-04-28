@@ -34,17 +34,45 @@ export function initScanScreen({ onCapture, onBack } = {}) {
     _startCamera();
   });
 
-  return { start: startScan, stop: stopCamera };
+  return {
+    /**
+     * Vollständiger Start (army bereits vorhanden): Label + Kamera.
+     * Nur nutzen wenn army synchron verfügbar ist — kein await davor!
+     */
+    start: startScan,
+
+    /**
+     * iOS-sicherer Start: Kamera sofort starten (kein await davor),
+     * Army-Label erst danach per setArmy() setzen.
+     * Pflicht auf iOS Safari: getUserMedia muss im User-Gesture-Stack bleiben.
+     */
+    startCamera: startCameraOnly,
+
+    /** Army-Label nachträglich setzen, nachdem async-Daten geladen wurden. */
+    setArmy: (army) => _setUnitLabel(army, 0),
+
+    stop: stopCamera,
+  };
 }
 
 /**
- * Scan-Screen aktivieren: Label setzen, Kamera starten.
- * @param {object|null} army - aktive Armeeliste (kann null sein)
+ * Vollständiger Start: Label setzen + Kamera.
+ * @param {object|null} army
  */
 export function startScan(army) {
   _setUnitLabel(army, 0);
   _setPermissionError(false);
   _startCamera();
+}
+
+/**
+ * iOS-sicherer Kamerastart: getUserMedia sofort, kein await davor.
+ * Army-Label separat per setArmy() nachziehen.
+ */
+export function startCameraOnly() {
+  _setUnitLabel(null, 0);   // Reset Label auf — / —
+  _setPermissionError(false);
+  _startCamera();            // getUserMedia wird hier initiiert — noch im Gesture-Context
 }
 
 /**

@@ -102,11 +102,17 @@ function wireStaticListeners(manualCtrl, scanCtrl) {
   const homeScanBtn = document.getElementById('home-scan-btn');
   if (homeScanBtn) {
     homeScanBtn.addEventListener('click', async () => {
-      const activeId  = await getActiveArmyId();
-      const armies    = await getAllArmies();
-      const activeArmy = activeId ? armies.find((a) => a.id === activeId) : null;
+      // ⚠️  iOS Safari: getUserMedia muss synchron im Gesture-Handler aufgerufen werden.
+      // Kein await vor startCamera() — sonst verliert iOS den Gesture-Context und
+      // zeigt den Permission-Dialog nicht.
       navigate('screen-scan');
-      scanCtrl.start(activeArmy || null);
+      scanCtrl.startCamera();                          // getUserMedia wird HIER gefeuert
+
+      // Erst NACH dem Camera-Start dürfen async-Calls folgen
+      const activeId   = await getActiveArmyId();
+      const armies     = await getAllArmies();
+      const activeArmy = activeId ? armies.find((a) => a.id === activeId) : null;
+      scanCtrl.setArmy(activeArmy || null);            // Label nachziehen
     });
   }
 }

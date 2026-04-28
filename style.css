@@ -33,6 +33,12 @@
   padding: 0;
 }
 
+/* Sicherstellen dass [hidden] auch greift wenn die Klasse display: flex setzt.
+   Ohne !important überschreiben spezifischere Klassen (z.B. .scan-error) den UA-Stylesheet. */
+[hidden] {
+  display: none !important;
+}
+
 body {
   background: var(--bg);
   color: var(--text-primary);
